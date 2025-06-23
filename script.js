@@ -72,7 +72,8 @@ class RhythmicReader {
         document.getElementById('voiceSelect').addEventListener('change', (e) => this.updateVoice(e.target.value));
         document.getElementById('testVoiceBtn').addEventListener('click', () => this.testVoice());
 
-        // Settings
+        // Settings and Help
+        document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
         document.getElementById('closeSettingsBtn').addEventListener('click', () => this.closeSettings());
         document.getElementById('saveSettingsBtn').addEventListener('click', () => this.saveSettings());
@@ -317,13 +318,23 @@ class RhythmicReader {
         const textDisplay = document.getElementById('textDisplay');
         textDisplay.innerHTML = '';
 
+        // Use document fragment for better performance
+        const fragment = document.createDocumentFragment();
+
         this.textLines.forEach((line, index) => {
             const lineElement = document.createElement('div');
             lineElement.className = 'text-line';
             lineElement.textContent = line;
             lineElement.id = `line-${index}`;
-            textDisplay.appendChild(lineElement);
+            lineElement.setAttribute('role', 'text');
+            lineElement.setAttribute('aria-label', `Line ${index + 1}: ${line}`);
+            fragment.appendChild(lineElement);
         });
+
+        textDisplay.appendChild(fragment);
+
+        // Announce total lines to screen reader
+        this.announceToScreenReader(`Text loaded with ${this.textLines.length} lines ready for reading.`);
     }
 
     // Toggle play/pause
@@ -407,8 +418,7 @@ class RhythmicReader {
 
         this.currentUtterance.onerror = (event) => {
             console.error('Speech synthesis error:', event);
-            alert('Speech synthesis error. Please try a different voice or refresh the page.');
-            this.pauseReading();
+            this.handleSpeechError(event);
         };
 
         // Ensure speech synthesis is ready
@@ -905,6 +915,50 @@ class RhythmicReader {
     closeTutorial() {
         document.getElementById('tutorialOverlay').style.display = 'none';
         localStorage.setItem('rhythmicReaderTutorialSeen', 'true');
+    }
+
+    // Show help/tutorial
+    showHelp() {
+        document.getElementById('tutorialOverlay').style.display = 'flex';
+        document.getElementById('tutorialOverlay').classList.add('fade-in');
+    }
+
+    // Handle speech synthesis errors
+    handleSpeechError(event) {
+        console.error('Speech synthesis error details:', event);
+
+        let errorMessage = 'Speech synthesis encountered an error. ';
+
+        switch (event.error) {
+            case 'network':
+                errorMessage += 'Please check your internet connection and try again.';
+                break;
+            case 'synthesis-failed':
+                errorMessage += 'Speech synthesis failed. Try selecting a different voice.';
+                break;
+            case 'synthesis-unavailable':
+                errorMessage += 'Speech synthesis is not available. Please try refreshing the page.';
+                break;
+            case 'voice-unavailable':
+                errorMessage += 'The selected voice is not available. Please choose a different voice.';
+                break;
+            case 'text-too-long':
+                errorMessage += 'The text is too long for speech synthesis. Try breaking it into smaller sections.';
+                break;
+            case 'rate-not-supported':
+                errorMessage += 'The selected reading speed is not supported. Try adjusting the speed.';
+                break;
+            default:
+                errorMessage += 'Please try refreshing the page or selecting a different voice.';
+        }
+
+        this.pauseReading();
+        this.announceToScreenReader('Speech synthesis error occurred. Reading paused.');
+
+        // Show user-friendly error message
+        setTimeout(() => {
+            alert(errorMessage);
+        }, 100);
     }
 
     // Keyboard shortcuts

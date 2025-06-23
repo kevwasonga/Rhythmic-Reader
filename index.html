@@ -32,9 +32,14 @@
                     <span class="title-icon">📖</span>
                     Rhythmic Reader
                 </h1>
-                <button id="settingsBtn" class="settings-btn" aria-label="Open Settings">
-                    ⚙️
-                </button>
+                <div class="header-buttons">
+                    <button id="helpBtn" class="header-btn" aria-label="Show Help" title="Show Help">
+                        ❓
+                    </button>
+                    <button id="settingsBtn" class="header-btn" aria-label="Open Settings" title="Open Settings">
+                        ⚙️
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -256,23 +261,62 @@
         <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
             <div class="tutorial-content">
                 <h2>Welcome to Rhythmic Reader! 👋</h2>
+                <p class="tutorial-intro">Your personal reading companion for improved speed and comprehension</p>
+
                 <div class="tutorial-steps">
                     <div class="tutorial-step">
                         <span class="step-number">1</span>
-                        <p>Paste text or upload a .txt file</p>
+                        <div class="step-content">
+                            <h4>Add Your Text</h4>
+                            <p>• Paste text directly into the text area<br>
+                            • Upload .txt, .pdf, or .rtf files<br>
+                            • Drag and drop files for quick loading</p>
+                        </div>
                     </div>
                     <div class="tutorial-step">
                         <span class="step-number">2</span>
-                        <p>Adjust reading speed and voice settings</p>
+                        <div class="step-content">
+                            <h4>Customize Your Experience</h4>
+                            <p>• Adjust reading speed (50-400 WPM)<br>
+                            • Choose your preferred voice<br>
+                            • Test audio with the "Test Voice" button</p>
+                        </div>
                     </div>
                     <div class="tutorial-step">
                         <span class="step-number">3</span>
-                        <p>Click "Start Reading" and follow along!</p>
+                        <div class="step-content">
+                            <h4>Start Reading</h4>
+                            <p>• Click "Start Reading" to begin<br>
+                            • Follow the highlighted text as it's read aloud<br>
+                            • Use controls to pause, skip, or adjust speed</p>
+                        </div>
+                    </div>
+                    <div class="tutorial-step">
+                        <span class="step-number">4</span>
+                        <div class="step-content">
+                            <h4>Pro Tips</h4>
+                            <p>• Use keyboard shortcuts for quick navigation<br>
+                            • Customize themes and fonts in settings<br>
+                            • Enable auto-scroll for hands-free reading</p>
+                        </div>
                     </div>
                 </div>
+
+                <div class="tutorial-features">
+                    <h3>Key Features:</h3>
+                    <div class="features-grid">
+                        <div class="feature-item">📖 Line-by-line highlighting</div>
+                        <div class="feature-item">🎯 Adjustable reading speed</div>
+                        <div class="feature-item">🎨 Multiple themes & fonts</div>
+                        <div class="feature-item">♿ Accessibility focused</div>
+                        <div class="feature-item">📱 Mobile friendly</div>
+                        <div class="feature-item">💾 Settings persistence</div>
+                    </div>
+                </div>
+
                 <div class="tutorial-actions">
-                    <button id="skipTutorialBtn" class="secondary-btn">Skip</button>
-                    <button id="startTutorialBtn" class="primary-btn">Got it!</button>
+                    <button id="skipTutorialBtn" class="secondary-btn">Skip Tutorial</button>
+                    <button id="startTutorialBtn" class="primary-btn">Let's Start Reading!</button>
                 </div>
             </div>
         </div>

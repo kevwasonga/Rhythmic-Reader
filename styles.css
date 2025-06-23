@@ -145,7 +145,12 @@ h3 { font-size: var(--font-size-xl); }
     font-size: var(--font-size-2xl);
 }
 
-.settings-btn {
+.header-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.header-btn {
     background: none;
     border: none;
     font-size: var(--font-size-xl);
@@ -153,9 +158,14 @@ h3 { font-size: var(--font-size-xl); }
     padding: var(--spacing-sm);
     border-radius: var(--radius-md);
     transition: background-color 0.2s ease;
+    min-width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.settings-btn:hover {
+.header-btn:hover {
     background-color: var(--bg-tertiary);
 }
 
@@ -821,14 +831,22 @@ textarea:focus {
     background-color: var(--bg-primary);
     border-radius: var(--radius-xl);
     padding: var(--spacing-2xl);
-    max-width: 500px;
-    width: 90%;
+    max-width: 700px;
+    width: 95%;
+    max-height: 90vh;
+    overflow-y: auto;
     text-align: center;
     box-shadow: var(--shadow-lg);
 }
 
-.tutorial-content h2 {
+.tutorial-intro {
+    font-size: var(--font-size-lg);
+    color: var(--text-secondary);
     margin-bottom: var(--spacing-xl);
+}
+
+.tutorial-content h2 {
+    margin-bottom: var(--spacing-md);
     color: var(--accent-color);
 }
 
@@ -838,10 +856,14 @@ textarea:focus {
 
 .tutorial-step {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: var(--spacing-md);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
     text-align: left;
+    padding: var(--spacing-md);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
 }
 
 .tutorial-step:last-child {
@@ -851,20 +873,61 @@ textarea:focus {
 .step-number {
     background-color: var(--accent-color);
     color: white;
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
     flex-shrink: 0;
+    font-size: var(--font-size-lg);
+}
+
+.step-content h4 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--accent-color);
+    font-size: var(--font-size-lg);
+}
+
+.step-content p {
+    margin: 0;
+    line-height: 1.6;
+    color: var(--text-secondary);
+}
+
+.tutorial-features {
+    margin-bottom: var(--spacing-xl);
+    text-align: left;
+}
+
+.tutorial-features h3 {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+    color: var(--accent-color);
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.feature-item {
+    background-color: var(--bg-secondary);
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    text-align: center;
+    font-size: var(--font-size-sm);
+    color: var(--text-primary);
 }
 
 .tutorial-actions {
     display: flex;
     justify-content: center;
     gap: var(--spacing-md);
+    flex-wrap: wrap;
 }
 
 /* Font Family Classes */
