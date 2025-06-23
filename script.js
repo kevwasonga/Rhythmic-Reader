@@ -67,8 +67,10 @@ class RhythmicReader {
         document.getElementById('backToInputBtn').addEventListener('click', () => this.backToInput());
         document.getElementById('restartBtn').addEventListener('click', () => this.restartReading());
 
-        // Speed and voice controls
+        // Speed, volume and voice controls
         document.getElementById('speedSlider').addEventListener('input', (e) => this.updateSpeed(e.target.value));
+        document.getElementById('volumeSlider').addEventListener('input', (e) => this.updateVolume(e.target.value));
+        document.getElementById('muteBtn').addEventListener('click', () => this.toggleMute());
         document.getElementById('voiceSelect').addEventListener('change', (e) => this.updateVoice(e.target.value));
         document.getElementById('testVoiceBtn').addEventListener('click', () => this.testVoice());
 
@@ -98,6 +100,7 @@ class RhythmicReader {
         document.getElementById('autoScrollCheckbox').addEventListener('change', (e) => this.updateAutoScroll(e.target.checked));
         document.getElementById('showWpmCheckbox').addEventListener('change', (e) => this.updateShowWpm(e.target.checked));
         document.getElementById('naturalSpeechCheckbox').addEventListener('change', (e) => this.updateNaturalSpeech(e.target.checked));
+        document.getElementById('filterRoboticCheckbox').addEventListener('change', (e) => this.updateFilterRobotic(e.target.checked));
 
         // Tutorial
         document.getElementById('skipTutorialBtn').addEventListener('click', () => this.closeTutorial());
@@ -162,8 +165,16 @@ class RhythmicReader {
 
         const voicesToSort = englishVoices.length > 0 ? englishVoices : voices;
 
+        // Filter out robotic voices if setting is enabled
+        let finalVoices = voicesToSort;
+        if (this.settings.filterRobotic) {
+            const naturalVoices = this.filterRoboticVoices(voicesToSort);
+            // Use natural voices if available, otherwise fall back to all voices
+            finalVoices = naturalVoices.length > 0 ? naturalVoices : voicesToSort;
+        }
+
         // Sort voices by quality and naturalness
-        return voicesToSort.sort((a, b) => {
+        return finalVoices.sort((a, b) => {
             const aScore = this.getVoiceQualityScore(a);
             const bScore = this.getVoiceQualityScore(b);
             return bScore - aScore; // Higher score first
@@ -212,6 +223,26 @@ class RhythmicReader {
                name.includes('human') ||
                name.includes('realistic') ||
                (voice.localService && !name.includes('robotic'));
+    }
+
+    // Check if voice sounds robotic (to filter out)
+    isRoboticVoice(voice) {
+        const name = voice.name.toLowerCase();
+        const roboticIndicators = [
+            'robotic', 'robot', 'synthetic', 'basic', 'simple',
+            'monotone', 'mechanical', 'artificial', 'computer',
+            'default', 'system', 'generic', 'standard'
+        ];
+
+        return roboticIndicators.some(indicator => name.includes(indicator)) ||
+               (!voice.localService && name.includes('microsoft')) || // Some MS voices are robotic
+               name.includes('espeak') ||
+               name.includes('festival');
+    }
+
+    // Filter out robotic voices from the list
+    filterRoboticVoices(voices) {
+        return voices.filter(voice => !this.isRoboticVoice(voice));
     }
 
     // Validate text input
@@ -469,7 +500,7 @@ class RhythmicReader {
         const wpm = parseInt(document.getElementById('speedSlider').value);
         this.currentUtterance.rate = this.wpmToRate(wpm);
         this.currentUtterance.pitch = this.settings.naturalSpeech ? this.getOptimalPitch() : 1.0;
-        this.currentUtterance.volume = 1.0;
+        this.currentUtterance.volume = this.getEffectiveVolume();
 
         // Add natural pauses and emphasis if enabled
         const processedText = this.settings.naturalSpeech ? this.addNaturalPauses(line) : line;
@@ -946,6 +977,73 @@ class RhythmicReader {
         }
     }
 
+    // Update volume
+    updateVolume(volume) {
+        this.settings.volume = parseInt(volume);
+        this.settings.isMuted = volume == 0;
+        document.getElementById('volumeValue').textContent = volume;
+        this.updateMuteButton();
+        this.autoSaveSettings();
+
+        // If currently speaking, update the volume immediately
+        if (this.isPlaying && this.currentUtterance) {
+            this.currentUtterance.volume = this.getEffectiveVolume();
+        }
+
+        // Announce volume change
+        this.announceToScreenReader(`Volume set to ${volume} percent`);
+    }
+
+    // Toggle mute/unmute
+    toggleMute() {
+        if (this.settings.isMuted) {
+            // Unmute - restore previous volume or set to 50% if it was 0
+            const restoreVolume = this.settings.volume > 0 ? this.settings.volume : 50;
+            this.settings.isMuted = false;
+            document.getElementById('volumeSlider').value = restoreVolume;
+            this.updateVolume(restoreVolume);
+            this.announceToScreenReader('Audio unmuted');
+        } else {
+            // Mute
+            this.settings.isMuted = true;
+            this.updateMuteButton();
+            this.autoSaveSettings();
+
+            // If currently speaking, mute immediately
+            if (this.isPlaying && this.currentUtterance) {
+                this.currentUtterance.volume = 0;
+            }
+            this.announceToScreenReader('Audio muted');
+        }
+    }
+
+    // Update mute button appearance
+    updateMuteButton() {
+        const muteBtn = document.getElementById('muteBtn');
+        if (this.settings.isMuted || this.settings.volume === 0) {
+            muteBtn.textContent = '🔇';
+            muteBtn.setAttribute('title', 'Unmute');
+            muteBtn.setAttribute('aria-label', 'Unmute');
+        } else if (this.settings.volume < 30) {
+            muteBtn.textContent = '🔈';
+            muteBtn.setAttribute('title', 'Mute');
+            muteBtn.setAttribute('aria-label', 'Mute');
+        } else if (this.settings.volume < 70) {
+            muteBtn.textContent = '🔉';
+            muteBtn.setAttribute('title', 'Mute');
+            muteBtn.setAttribute('aria-label', 'Mute');
+        } else {
+            muteBtn.textContent = '🔊';
+            muteBtn.setAttribute('title', 'Mute');
+            muteBtn.setAttribute('aria-label', 'Mute');
+        }
+    }
+
+    // Get effective volume (considering mute state)
+    getEffectiveVolume() {
+        return this.settings.isMuted ? 0 : this.settings.volume / 100;
+    }
+
     // Update voice selection
     updateVoice(voiceIndex) {
         this.settings.voice = parseInt(voiceIndex);
@@ -981,7 +1079,7 @@ class RhythmicReader {
 
         utterance.rate = this.wpmToRate(wpm);
         utterance.pitch = this.getOptimalPitch();
-        utterance.volume = 1.0;
+        utterance.volume = this.getEffectiveVolume();
 
         // Apply content-based adjustments
         this.adjustSpeechForContent(utterance, testText);
@@ -1021,7 +1119,10 @@ class RhythmicReader {
             autoScroll: true,
             showWpm: true,
             naturalSpeech: true,
+            filterRobotic: true,
             speed: 150,
+            volume: 100,
+            isMuted: false,
             voice: 0
         };
 
@@ -1082,8 +1183,12 @@ class RhythmicReader {
         document.getElementById('autoScrollCheckbox').checked = this.settings.autoScroll;
         document.getElementById('showWpmCheckbox').checked = this.settings.showWpm;
         document.getElementById('naturalSpeechCheckbox').checked = this.settings.naturalSpeech;
+        document.getElementById('filterRoboticCheckbox').checked = this.settings.filterRobotic;
         document.getElementById('speedSlider').value = this.settings.speed;
         document.getElementById('speedValue').textContent = this.settings.speed;
+        document.getElementById('volumeSlider').value = this.settings.volume;
+        document.getElementById('volumeValue').textContent = this.settings.volume;
+        this.updateMuteButton();
 
         // Apply voice setting if available
         if (this.voices.length > 0 && this.settings.voice < this.voices.length) {
@@ -1314,6 +1419,20 @@ class RhythmicReader {
         const message = enabled ?
             'Enhanced natural speech enabled. Speech will include natural pauses and emphasis.' :
             'Enhanced natural speech disabled. Speech will use basic settings.';
+        this.announceToScreenReader(message);
+    }
+
+    updateFilterRobotic(enabled) {
+        this.settings.filterRobotic = enabled;
+        this.autoSaveSettings();
+
+        // Reload voices with new filtering
+        this.loadVoices();
+
+        // Announce the change
+        const message = enabled ?
+            'Robotic voice filtering enabled. Only natural-sounding voices will be shown.' :
+            'Robotic voice filtering disabled. All available voices will be shown.';
         this.announceToScreenReader(message);
     }
 

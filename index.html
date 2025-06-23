@@ -107,6 +107,23 @@
                                aria-label="Reading speed in words per minute"
                                aria-describedby="speedValue">
                     </div>
+
+                    <div class="volume-control">
+                        <div class="volume-header">
+                            <label for="volumeSlider">Volume: <span id="volumeValue">100</span>%</label>
+                            <button id="muteBtn" class="mute-btn" aria-label="Mute/Unmute" title="Mute/Unmute">
+                                🔊
+                            </button>
+                        </div>
+                        <input type="range"
+                               id="volumeSlider"
+                               min="0"
+                               max="100"
+                               value="100"
+                               step="5"
+                               aria-label="Audio volume percentage"
+                               aria-describedby="volumeValue">
+                    </div>
                     
                     <div class="voice-control">
                         <label for="voiceSelect">Voice:</label>
@@ -227,6 +244,13 @@
                             <label>
                                 <input type="checkbox" id="naturalSpeechCheckbox" checked>
                                 Enhanced natural speech (pauses, emphasis, intonation)
+                            </label>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="filterRoboticCheckbox" checked>
+                                Filter out robotic-sounding voices
                             </label>
                         </div>
                     </div>
