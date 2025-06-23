@@ -12,7 +12,10 @@
     <link href="https://fonts.googleapis.com/css2?family=OpenDyslexic:wght@400;700&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="styles.css">
-    
+
+    <!-- PDF.js for PDF support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#2563eb">
     <link rel="manifest" href="manifest.json">
@@ -52,11 +55,12 @@
                         </div>
                         
                         <div class="file-upload-area" id="fileUploadArea">
-                            <input type="file" id="fileInput" accept=".txt" hidden>
+                            <input type="file" id="fileInput" accept=".txt,.pdf,.doc,.docx,.rtf" hidden>
                             <div class="upload-zone" id="uploadZone">
                                 <div class="upload-content">
                                     <span class="upload-icon">📄</span>
-                                    <p>Drag & drop a .txt file here</p>
+                                    <p>Drag & drop a file here</p>
+                                    <p>Supports: .txt, .pdf, .doc, .docx, .rtf</p>
                                     <p>or <button type="button" id="browseBtn" class="browse-btn">browse files</button></p>
                                 </div>
                             </div>
@@ -94,6 +98,7 @@
                         <select id="voiceSelect" aria-label="Select voice">
                             <option value="">Loading voices...</option>
                         </select>
+                        <button id="testVoiceBtn" class="test-voice-btn" type="button">🔊 Test Voice</button>
                     </div>
                 </div>
 

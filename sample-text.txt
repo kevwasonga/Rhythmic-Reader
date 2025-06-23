@@ -1,0 +1,25 @@
+Welcome to Rhythmic Reader!
+
+This is a sample text to test the reading functionality.
+
+The application will read this text line by line, highlighting each line as it speaks.
+
+You can adjust the reading speed to match your preference.
+
+The text-to-speech engine uses your browser's built-in voices.
+
+This tool is designed to help improve reading comprehension and speed.
+
+It's particularly useful for people with dyslexia or attention difficulties.
+
+You can pause, resume, or skip lines using the control buttons.
+
+Keyboard shortcuts are also available for easy navigation.
+
+The application works offline once loaded, making it convenient to use anywhere.
+
+Settings are saved locally in your browser for a personalized experience.
+
+Try different themes and font options to find what works best for you.
+
+Happy reading!

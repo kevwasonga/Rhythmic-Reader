@@ -20,12 +20,29 @@ class RhythmicReader {
         this.bindEvents();
         this.loadVoices();
         this.applySettings();
+        this.testSpeechSynthesis();
         this.showTutorialIfFirstTime();
-        
+
         // Load voices when they become available
         if (this.speechSynthesis.onvoiceschanged !== undefined) {
             this.speechSynthesis.onvoiceschanged = () => this.loadVoices();
         }
+    }
+
+    // Test speech synthesis capability
+    testSpeechSynthesis() {
+        if (!('speechSynthesis' in window)) {
+            alert('Speech synthesis is not supported in your browser. Please use Chrome, Firefox, Safari, or Edge.');
+            return;
+        }
+
+        // Test with a short phrase
+        setTimeout(() => {
+            if (this.voices.length === 0) {
+                console.warn('No voices available yet, retrying...');
+                setTimeout(() => this.testSpeechSynthesis(), 1000);
+            }
+        }, 500);
     }
 
     // Bind all event listeners
@@ -53,6 +70,7 @@ class RhythmicReader {
         // Speed and voice controls
         document.getElementById('speedSlider').addEventListener('input', (e) => this.updateSpeed(e.target.value));
         document.getElementById('voiceSelect').addEventListener('change', (e) => this.updateVoice(e.target.value));
+        document.getElementById('testVoiceBtn').addEventListener('click', () => this.testVoice());
 
         // Settings
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
@@ -84,19 +102,32 @@ class RhythmicReader {
     loadVoices() {
         this.voices = this.speechSynthesis.getVoices();
         const voiceSelect = document.getElementById('voiceSelect');
-        
+
         if (this.voices.length > 0) {
             voiceSelect.innerHTML = '';
-            this.voices.forEach((voice, index) => {
+
+            // Filter for English voices and prioritize quality ones
+            const englishVoices = this.voices.filter(voice =>
+                voice.lang.startsWith('en') || voice.lang === 'en-US' || voice.lang === 'en-GB'
+            );
+
+            const allVoices = englishVoices.length > 0 ? englishVoices : this.voices;
+
+            allVoices.forEach((voice, index) => {
                 const option = document.createElement('option');
-                option.value = index;
+                option.value = this.voices.indexOf(voice); // Use original index
                 option.textContent = `${voice.name} (${voice.lang})`;
-                if (voice.default) option.selected = true;
+                if (voice.default || voice.name.includes('Google') || voice.name.includes('Microsoft')) {
+                    option.selected = true;
+                }
                 voiceSelect.appendChild(option);
             });
-            
+
             // Hide loading indicator
             document.getElementById('loadingIndicator').style.display = 'none';
+        } else {
+            // Retry loading voices after a short delay
+            setTimeout(() => this.loadVoices(), 100);
         }
     }
 
@@ -109,18 +140,107 @@ class RhythmicReader {
     }
 
     // Handle file upload
-    handleFileUpload(event) {
+    async handleFileUpload(event) {
         const file = event.target.files[0];
-        if (file && file.type === 'text/plain') {
+        if (!file) return;
+
+        // Show loading indicator
+        this.showLoadingIndicator(`Processing ${file.name}...`);
+
+        try {
+            let text = '';
+
+            if (file.type === 'text/plain') {
+                text = await this.readTextFile(file);
+            } else if (file.type === 'application/pdf') {
+                text = await this.readPdfFile(file);
+            } else if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) {
+                this.hideLoadingIndicator();
+                alert('Word documents are not yet supported. Please convert to PDF or plain text.');
+                return;
+            } else if (file.type === 'application/rtf' || file.name.endsWith('.rtf')) {
+                text = await this.readRtfFile(file);
+            } else {
+                this.hideLoadingIndicator();
+                alert('Unsupported file type. Please use .txt, .pdf, or .rtf files.');
+                return;
+            }
+
+            if (text) {
+                document.getElementById('textInput').value = text;
+                this.validateInput();
+                this.hideLoadingIndicator();
+                alert(`Successfully loaded ${file.name}!`);
+            } else {
+                this.hideLoadingIndicator();
+                alert('No text content found in the file.');
+            }
+        } catch (error) {
+            console.error('Error reading file:', error);
+            this.hideLoadingIndicator();
+            alert('Error reading file. Please try again or use a different file.');
+        }
+    }
+
+    // Show loading indicator
+    showLoadingIndicator(message = 'Loading...') {
+        const indicator = document.getElementById('loadingIndicator');
+        const messageElement = indicator.querySelector('p');
+        messageElement.textContent = message;
+        indicator.style.display = 'flex';
+    }
+
+    // Hide loading indicator
+    hideLoadingIndicator() {
+        document.getElementById('loadingIndicator').style.display = 'none';
+    }
+
+    // Read plain text file
+    readTextFile(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    }
+
+    // Read PDF file using PDF.js
+    async readPdfFile(file) {
+        if (typeof pdfjsLib === 'undefined') {
+            throw new Error('PDF.js library not loaded');
+        }
+
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let fullText = '';
+
+        for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            fullText += pageText + '\n';
+        }
+
+        return fullText;
+    }
+
+    // Read RTF file (basic support)
+    readRtfFile(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                document.getElementById('textInput').value = e.target.result;
-                this.validateInput();
+                let rtfContent = e.target.result;
+                // Basic RTF to text conversion (removes RTF formatting)
+                rtfContent = rtfContent.replace(/\\[a-z]+\d*\s?/g, ''); // Remove RTF commands
+                rtfContent = rtfContent.replace(/[{}]/g, ''); // Remove braces
+                rtfContent = rtfContent.replace(/\\\\/g, '\\'); // Fix escaped backslashes
+                rtfContent = rtfContent.trim();
+                resolve(rtfContent);
             };
+            reader.onerror = reject;
             reader.readAsText(file);
-        } else {
-            alert('Please select a valid .txt file');
-        }
+        });
     }
 
     // Drag and drop handlers
@@ -133,20 +253,16 @@ class RhythmicReader {
         event.currentTarget.classList.remove('drag-over');
     }
 
-    handleDrop(event) {
+    async handleDrop(event) {
         event.preventDefault();
         event.currentTarget.classList.remove('drag-over');
-        
+
         const files = event.dataTransfer.files;
-        if (files.length > 0 && files[0].type === 'text/plain') {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('textInput').value = e.target.result;
-                this.validateInput();
-            };
-            reader.readAsText(files[0]);
-        } else {
-            alert('Please drop a valid .txt file');
+        if (files.length > 0) {
+            // Simulate file input change event
+            const fileInput = document.getElementById('fileInput');
+            fileInput.files = files;
+            await this.handleFileUpload({ target: { files: files } });
         }
     }
 
@@ -240,53 +356,83 @@ class RhythmicReader {
 
         const line = this.textLines[this.currentLineIndex];
         this.highlightCurrentLine();
-        
+
         // Create utterance
         this.currentUtterance = new SpeechSynthesisUtterance(line);
-        
+
         // Set voice
         const voiceIndex = document.getElementById('voiceSelect').value;
-        if (voiceIndex && this.voices[voiceIndex]) {
+        if (voiceIndex !== '' && this.voices[voiceIndex]) {
             this.currentUtterance.voice = this.voices[voiceIndex];
         }
 
-        // Set rate based on WPM
+        // Set rate and other properties based on WPM
         const wpm = parseInt(document.getElementById('speedSlider').value);
         this.currentUtterance.rate = this.wpmToRate(wpm);
+        this.currentUtterance.pitch = 1.0;
+        this.currentUtterance.volume = 1.0;
+
+        // Calculate timing based on WPM for visual progression
+        const wordCount = line.split(' ').length;
+        const expectedDuration = (wordCount / wpm) * 60 * 1000; // in milliseconds
 
         // Event handlers
+        this.currentUtterance.onstart = () => {
+            console.log('Started speaking:', line.substring(0, 50) + '...');
+        };
+
         this.currentUtterance.onend = () => {
             if (this.isPlaying) {
                 this.markLineCompleted();
                 this.currentLineIndex++;
                 this.updateProgress();
-                
+
                 // Auto-scroll if enabled
                 if (this.settings.autoScroll) {
                     this.scrollToCurrentLine();
                 }
-                
-                // Continue to next line
-                setTimeout(() => this.readCurrentLine(), 100);
+
+                // Continue to next line with a small pause
+                setTimeout(() => this.readCurrentLine(), 200);
             }
         };
 
         this.currentUtterance.onerror = (event) => {
             console.error('Speech synthesis error:', event);
+            alert('Speech synthesis error. Please try a different voice or refresh the page.');
             this.pauseReading();
         };
 
+        // Ensure speech synthesis is ready
+        if (this.speechSynthesis.paused) {
+            this.speechSynthesis.resume();
+        }
+
         // Start speaking
-        this.speechSynthesis.speak(this.currentUtterance);
-        
+        try {
+            this.speechSynthesis.speak(this.currentUtterance);
+            console.log('Speech synthesis started for line:', this.currentLineIndex);
+        } catch (error) {
+            console.error('Error starting speech synthesis:', error);
+            alert('Unable to start speech synthesis. Please check your browser settings.');
+            this.pauseReading();
+        }
+
         // Update word count for WPM calculation
         this.wordsRead += line.split(' ').length;
     }
 
     // Convert WPM to speech rate
     wpmToRate(wpm) {
-        // Average speaking rate is about 150 WPM at rate 1.0
-        return Math.max(0.1, Math.min(3.0, wpm / 150));
+        // More accurate conversion: typical speech is 150-200 WPM at rate 1.0
+        // Adjust the formula for better accuracy
+        if (wpm <= 100) {
+            return Math.max(0.1, wpm / 180);
+        } else if (wpm <= 200) {
+            return wpm / 160;
+        } else {
+            return Math.min(3.0, wpm / 140);
+        }
     }
 
     // Highlight current line
@@ -438,6 +584,50 @@ class RhythmicReader {
     // Update voice selection
     updateVoice(voiceIndex) {
         // Voice will be applied to next utterance
+    }
+
+    // Test voice functionality
+    testVoice() {
+        const voiceIndex = document.getElementById('voiceSelect').value;
+        const wpm = parseInt(document.getElementById('speedSlider').value);
+
+        if (this.speechSynthesis.speaking) {
+            this.speechSynthesis.cancel();
+        }
+
+        const testText = "Hello! This is a test of the text-to-speech functionality. Your voice and speed settings are working correctly.";
+        const utterance = new SpeechSynthesisUtterance(testText);
+
+        if (voiceIndex !== '' && this.voices[voiceIndex]) {
+            utterance.voice = this.voices[voiceIndex];
+        }
+
+        utterance.rate = this.wpmToRate(wpm);
+        utterance.pitch = 1.0;
+        utterance.volume = 1.0;
+
+        utterance.onstart = () => {
+            console.log('Test speech started');
+            document.getElementById('testVoiceBtn').textContent = '🔇 Stop Test';
+        };
+
+        utterance.onend = () => {
+            console.log('Test speech ended');
+            document.getElementById('testVoiceBtn').textContent = '🔊 Test Voice';
+        };
+
+        utterance.onerror = (event) => {
+            console.error('Test speech error:', event);
+            alert('Speech test failed. Please check your browser settings or try a different voice.');
+            document.getElementById('testVoiceBtn').textContent = '🔊 Test Voice';
+        };
+
+        try {
+            this.speechSynthesis.speak(utterance);
+        } catch (error) {
+            console.error('Error testing voice:', error);
+            alert('Unable to test voice. Please check your browser settings.');
+        }
     }
 
     // Settings management

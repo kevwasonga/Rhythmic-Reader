@@ -57,7 +57,11 @@
     --border-color: #334155;
     --accent-color: #3b82f6;
     --accent-hover: #2563eb;
+    --highlight-color: #fbbf24;
     --highlight-bg: #451a03;
+    --success-color: #10b981;
+    --error-color: #ef4444;
+    --warning-color: #f59e0b;
 }
 
 /* Sepia Theme */
@@ -381,6 +385,23 @@ h3 { font-size: var(--font-size-xl); }
     background-color: var(--bg-primary);
     color: var(--text-primary);
     font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-sm);
+}
+
+.test-voice-btn {
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.test-voice-btn:hover {
+    background-color: var(--accent-color);
+    color: white;
 }
 
 /* Progress */
@@ -431,7 +452,7 @@ h3 { font-size: var(--font-size-xl); }
     background-color: var(--bg-primary);
     border-radius: var(--radius-lg);
     border: 1px solid var(--border-color);
-    line-height: 1.8;
+    line-height: var(--line-height-reading, 1.8);
     font-size: var(--font-size-lg);
 }
 
