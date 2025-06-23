@@ -150,6 +150,20 @@ h3 { font-size: var(--font-size-xl); }
     gap: var(--spacing-sm);
     margin: 0;
     color: var(--accent-color);
+    cursor: pointer;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.app-title:hover {
+    background-color: var(--bg-tertiary);
+    transform: translateY(-1px);
+}
+
+.app-title:active {
+    transform: translateY(0);
 }
 
 .title-icon {

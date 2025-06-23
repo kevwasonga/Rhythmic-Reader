@@ -28,7 +28,7 @@
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <h1 class="app-title">
+                <h1 class="app-title" id="appLogo" role="button" tabindex="0" aria-label="Rhythmic Reader - Go to home page">
                     <span class="title-icon">📖</span>
                     Rhythmic Reader
                 </h1>
@@ -220,6 +220,13 @@
                             <label>
                                 <input type="checkbox" id="showWpmCheckbox" checked>
                                 Show live WPM counter
+                            </label>
+                        </div>
+
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="naturalSpeechCheckbox" checked>
+                                Enhanced natural speech (pauses, emphasis, intonation)
                             </label>
                         </div>
                     </div>

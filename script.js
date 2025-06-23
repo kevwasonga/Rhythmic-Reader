@@ -72,6 +72,15 @@ class RhythmicReader {
         document.getElementById('voiceSelect').addEventListener('change', (e) => this.updateVoice(e.target.value));
         document.getElementById('testVoiceBtn').addEventListener('click', () => this.testVoice());
 
+        // Logo and Navigation
+        document.getElementById('appLogo').addEventListener('click', () => this.goToHome());
+        document.getElementById('appLogo').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                this.goToHome();
+            }
+        });
+
         // Settings and Help
         document.getElementById('themeToggleBtn').addEventListener('click', () => this.toggleTheme());
         document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
@@ -88,6 +97,7 @@ class RhythmicReader {
         document.getElementById('highlightColorPicker').addEventListener('change', (e) => this.updateHighlightColor(e.target.value));
         document.getElementById('autoScrollCheckbox').addEventListener('change', (e) => this.updateAutoScroll(e.target.checked));
         document.getElementById('showWpmCheckbox').addEventListener('change', (e) => this.updateShowWpm(e.target.checked));
+        document.getElementById('naturalSpeechCheckbox').addEventListener('change', (e) => this.updateNaturalSpeech(e.target.checked));
 
         // Tutorial
         document.getElementById('skipTutorialBtn').addEventListener('click', () => this.closeTutorial());
@@ -110,20 +120,28 @@ class RhythmicReader {
         if (this.voices.length > 0) {
             voiceSelect.innerHTML = '';
 
-            // Filter for English voices and prioritize quality ones
-            const englishVoices = this.voices.filter(voice =>
-                voice.lang.startsWith('en') || voice.lang === 'en-US' || voice.lang === 'en-GB'
-            );
+            // Filter and prioritize voices for better quality
+            const prioritizedVoices = this.prioritizeVoices(this.voices);
 
-            const allVoices = englishVoices.length > 0 ? englishVoices : this.voices;
-
-            allVoices.forEach((voice, index) => {
+            prioritizedVoices.forEach((voice, index) => {
                 const option = document.createElement('option');
                 option.value = this.voices.indexOf(voice); // Use original index
-                option.textContent = `${voice.name} (${voice.lang})`;
-                if (voice.default || voice.name.includes('Google') || voice.name.includes('Microsoft')) {
+
+                // Add quality indicators
+                let qualityIndicator = '';
+                if (this.isHighQualityVoice(voice)) {
+                    qualityIndicator = ' ⭐';
+                } else if (this.isNaturalVoice(voice)) {
+                    qualityIndicator = ' 🎵';
+                }
+
+                option.textContent = `${voice.name} (${voice.lang})${qualityIndicator}`;
+
+                // Auto-select the best voice
+                if (index === 0) {
                     option.selected = true;
                 }
+
                 voiceSelect.appendChild(option);
             });
 
@@ -133,6 +151,67 @@ class RhythmicReader {
             // Retry loading voices after a short delay
             setTimeout(() => this.loadVoices(), 100);
         }
+    }
+
+    // Prioritize voices for better quality and naturalness
+    prioritizeVoices(voices) {
+        // Filter for English voices first
+        const englishVoices = voices.filter(voice =>
+            voice.lang.startsWith('en') || voice.lang === 'en-US' || voice.lang === 'en-GB'
+        );
+
+        const voicesToSort = englishVoices.length > 0 ? englishVoices : voices;
+
+        // Sort voices by quality and naturalness
+        return voicesToSort.sort((a, b) => {
+            const aScore = this.getVoiceQualityScore(a);
+            const bScore = this.getVoiceQualityScore(b);
+            return bScore - aScore; // Higher score first
+        });
+    }
+
+    // Calculate voice quality score
+    getVoiceQualityScore(voice) {
+        let score = 0;
+        const name = voice.name.toLowerCase();
+
+        // High-quality voice indicators
+        if (name.includes('neural') || name.includes('premium')) score += 100;
+        if (name.includes('google')) score += 80;
+        if (name.includes('microsoft')) score += 70;
+        if (name.includes('apple')) score += 60;
+        if (name.includes('enhanced') || name.includes('natural')) score += 50;
+
+        // Prefer certain voice types
+        if (name.includes('female') || name.includes('male')) score += 30;
+        if (name.includes('us') || name.includes('american')) score += 20;
+        if (name.includes('uk') || name.includes('british')) score += 15;
+
+        // Bonus for local voices (usually higher quality)
+        if (voice.localService) score += 40;
+
+        // Default voice bonus
+        if (voice.default) score += 10;
+
+        return score;
+    }
+
+    // Check if voice is high quality
+    isHighQualityVoice(voice) {
+        const name = voice.name.toLowerCase();
+        return name.includes('neural') ||
+               name.includes('premium') ||
+               name.includes('enhanced') ||
+               (name.includes('google') && voice.localService);
+    }
+
+    // Check if voice sounds natural
+    isNaturalVoice(voice) {
+        const name = voice.name.toLowerCase();
+        return name.includes('natural') ||
+               name.includes('human') ||
+               name.includes('realistic') ||
+               (voice.localService && !name.includes('robotic'));
     }
 
     // Validate text input
@@ -389,12 +468,21 @@ class RhythmicReader {
         // Set rate and other properties based on WPM
         const wpm = parseInt(document.getElementById('speedSlider').value);
         this.currentUtterance.rate = this.wpmToRate(wpm);
-        this.currentUtterance.pitch = 1.0;
+        this.currentUtterance.pitch = this.settings.naturalSpeech ? this.getOptimalPitch() : 1.0;
         this.currentUtterance.volume = 1.0;
+
+        // Add natural pauses and emphasis if enabled
+        const processedText = this.settings.naturalSpeech ? this.addNaturalPauses(line) : line;
+        this.currentUtterance.text = processedText;
 
         // Calculate timing based on WPM for visual progression
         const wordCount = line.split(' ').length;
         const expectedDuration = (wordCount / wpm) * 60 * 1000; // in milliseconds
+
+        // Adjust speech parameters based on content if natural speech is enabled
+        if (this.settings.naturalSpeech) {
+            this.adjustSpeechForContent(this.currentUtterance, line);
+        }
 
         // Event handlers
         this.currentUtterance.onstart = () => {
@@ -452,6 +540,151 @@ class RhythmicReader {
         } else {
             return Math.min(3.0, wpm / 140);
         }
+    }
+
+    // Get optimal pitch for more natural speech
+    getOptimalPitch() {
+        const voiceIndex = document.getElementById('voiceSelect').value;
+        if (voiceIndex !== '' && this.voices[voiceIndex]) {
+            const voice = this.voices[voiceIndex];
+
+            // Adjust pitch based on voice characteristics
+            if (voice.name.toLowerCase().includes('female')) {
+                return 1.1; // Slightly higher pitch for female voices
+            } else if (voice.name.toLowerCase().includes('male')) {
+                return 0.9; // Slightly lower pitch for male voices
+            }
+        }
+        return 1.0; // Default neutral pitch
+    }
+
+    // Add natural pauses and emphasis to text
+    addNaturalPauses(text) {
+        let processedText = text;
+
+        // Add pauses after punctuation for more natural speech
+        processedText = processedText.replace(/\./g, '. '); // Period pause
+        processedText = processedText.replace(/,/g, ', '); // Comma pause
+        processedText = processedText.replace(/;/g, '; '); // Semicolon pause
+        processedText = processedText.replace(/:/g, ': '); // Colon pause
+        processedText = processedText.replace(/\?/g, '? '); // Question pause
+        processedText = processedText.replace(/!/g, '! '); // Exclamation pause
+
+        // Add emphasis to certain words
+        processedText = this.addEmphasis(processedText);
+
+        // Clean up multiple spaces
+        processedText = processedText.replace(/\s+/g, ' ').trim();
+
+        return processedText;
+    }
+
+    // Add emphasis to important words
+    addEmphasis(text) {
+        // Words that should be emphasized (you can expand this list)
+        const emphasisWords = [
+            'important', 'crucial', 'essential', 'critical', 'vital',
+            'remember', 'note', 'warning', 'attention', 'focus',
+            'first', 'second', 'third', 'finally', 'conclusion',
+            'however', 'therefore', 'moreover', 'furthermore',
+            'amazing', 'incredible', 'fantastic', 'excellent'
+        ];
+
+        let processedText = text;
+
+        emphasisWords.forEach(word => {
+            const regex = new RegExp(`\\b${word}\\b`, 'gi');
+            // Use SSML-like emphasis (though not all browsers support it)
+            processedText = processedText.replace(regex, `<emphasis level="strong">${word}</emphasis>`);
+        });
+
+        return processedText;
+    }
+
+    // Add natural breathing pauses for longer texts
+    addBreathingPauses(text) {
+        const sentences = text.split(/[.!?]+/);
+        if (sentences.length > 3) {
+            // Add longer pauses every few sentences for breathing
+            return sentences.map((sentence, index) => {
+                if (index > 0 && index % 3 === 0) {
+                    return '. ' + sentence; // Longer pause
+                }
+                return sentence;
+            }).join('.');
+        }
+        return text;
+    }
+
+    // Adjust speech parameters based on content type
+    adjustSpeechForContent(utterance, text) {
+        const lowerText = text.toLowerCase();
+
+        // Detect content type and adjust accordingly
+        if (this.isQuestionSentence(text)) {
+            // Questions should have rising intonation
+            utterance.pitch = Math.min(2.0, utterance.pitch * 1.1);
+        } else if (this.isExclamationSentence(text)) {
+            // Exclamations should be more emphatic
+            utterance.pitch = Math.min(2.0, utterance.pitch * 1.05);
+            utterance.volume = Math.min(1.0, utterance.volume * 1.1);
+        } else if (this.isListItem(text)) {
+            // List items should have consistent pacing
+            utterance.rate = Math.max(0.1, utterance.rate * 0.95);
+        } else if (this.isHeading(text)) {
+            // Headings should be more prominent
+            utterance.pitch = Math.min(2.0, utterance.pitch * 1.08);
+            utterance.rate = Math.max(0.1, utterance.rate * 0.9);
+        } else if (this.isQuote(text)) {
+            // Quotes should sound different
+            utterance.pitch = Math.max(0.1, utterance.pitch * 0.95);
+        }
+
+        // Adjust for sentence length
+        const wordCount = text.split(' ').length;
+        if (wordCount > 20) {
+            // Longer sentences should be slightly slower
+            utterance.rate = Math.max(0.1, utterance.rate * 0.95);
+        } else if (wordCount < 5) {
+            // Short sentences can be slightly faster
+            utterance.rate = Math.min(3.0, utterance.rate * 1.05);
+        }
+    }
+
+    // Content type detection methods
+    isQuestionSentence(text) {
+        return text.trim().endsWith('?') ||
+               text.toLowerCase().startsWith('what') ||
+               text.toLowerCase().startsWith('how') ||
+               text.toLowerCase().startsWith('why') ||
+               text.toLowerCase().startsWith('when') ||
+               text.toLowerCase().startsWith('where') ||
+               text.toLowerCase().startsWith('who');
+    }
+
+    isExclamationSentence(text) {
+        return text.trim().endsWith('!') ||
+               text.toLowerCase().includes('wow') ||
+               text.toLowerCase().includes('amazing') ||
+               text.toLowerCase().includes('incredible');
+    }
+
+    isListItem(text) {
+        return /^\s*[-•*]\s/.test(text) ||
+               /^\s*\d+\.\s/.test(text) ||
+               /^\s*[a-zA-Z]\.\s/.test(text);
+    }
+
+    isHeading(text) {
+        return /^#{1,6}\s/.test(text) || // Markdown headings
+               text === text.toUpperCase() || // All caps
+               (text.length < 50 && !text.includes('.') && !text.includes(','));
+    }
+
+    isQuote(text) {
+        return (text.startsWith('"') && text.endsWith('"')) ||
+               (text.startsWith("'") && text.endsWith("'")) ||
+               text.startsWith('> ');
     }
 
     // Highlight current line
@@ -671,6 +904,35 @@ class RhythmicReader {
         this.announceToScreenReader('Returned to text input. You can modify your text or start a new reading session.');
     }
 
+    // Go to home page (logo click)
+    goToHome() {
+        // Stop any current reading
+        this.speechSynthesis.cancel();
+        this.isPlaying = false;
+        this.isPaused = false;
+
+        // Close any open modals
+        document.getElementById('settingsModal').style.display = 'none';
+        document.getElementById('tutorialOverlay').style.display = 'none';
+
+        // Show input section, hide reading section
+        document.getElementById('readingSection').style.display = 'none';
+        document.getElementById('inputSection').style.display = 'block';
+
+        // Focus on text input
+        document.getElementById('textInput').focus();
+
+        // Announce to screen readers
+        this.announceToScreenReader('Returned to home page. Ready to start a new reading session.');
+
+        // Add a subtle visual feedback
+        const logo = document.getElementById('appLogo');
+        logo.style.transform = 'scale(0.95)';
+        setTimeout(() => {
+            logo.style.transform = '';
+        }, 150);
+    }
+
     // Update reading speed
     updateSpeed(wpm) {
         this.settings.speed = parseInt(wpm);
@@ -700,16 +962,29 @@ class RhythmicReader {
             this.speechSynthesis.cancel();
         }
 
-        const testText = "Hello! This is a test of the text-to-speech functionality. Your voice and speed settings are working correctly.";
-        const utterance = new SpeechSynthesisUtterance(testText);
+        // More natural test text with varied content
+        const testTexts = [
+            "Hello! Welcome to Rhythmic Reader. This voice sounds great for reading, doesn't it?",
+            "Testing, one, two, three! How does this voice sound to you? Perfect for your reading session!",
+            "Greetings! This is your reading companion speaking. Ready to dive into some amazing content together?",
+            "Hi there! I'm here to help you read more effectively. This voice will guide you through your text beautifully.",
+            "Welcome! Let's test this wonderful voice. It's designed to make your reading experience smooth and enjoyable."
+        ];
+
+        const testText = testTexts[Math.floor(Math.random() * testTexts.length)];
+        const processedText = this.addNaturalPauses(testText);
+        const utterance = new SpeechSynthesisUtterance(processedText);
 
         if (voiceIndex !== '' && this.voices[voiceIndex]) {
             utterance.voice = this.voices[voiceIndex];
         }
 
         utterance.rate = this.wpmToRate(wpm);
-        utterance.pitch = 1.0;
+        utterance.pitch = this.getOptimalPitch();
         utterance.volume = 1.0;
+
+        // Apply content-based adjustments
+        this.adjustSpeechForContent(utterance, testText);
 
         utterance.onstart = () => {
             console.log('Test speech started');
@@ -745,6 +1020,7 @@ class RhythmicReader {
             highlightColor: '#fbbf24',
             autoScroll: true,
             showWpm: true,
+            naturalSpeech: true,
             speed: 150,
             voice: 0
         };
@@ -805,6 +1081,7 @@ class RhythmicReader {
         // Apply other settings
         document.getElementById('autoScrollCheckbox').checked = this.settings.autoScroll;
         document.getElementById('showWpmCheckbox').checked = this.settings.showWpm;
+        document.getElementById('naturalSpeechCheckbox').checked = this.settings.naturalSpeech;
         document.getElementById('speedSlider').value = this.settings.speed;
         document.getElementById('speedValue').textContent = this.settings.speed;
 
@@ -1027,6 +1304,17 @@ class RhythmicReader {
             this.updateProgress(); // Refresh to show/hide WPM
         }
         this.autoSaveSettings();
+    }
+
+    updateNaturalSpeech(enabled) {
+        this.settings.naturalSpeech = enabled;
+        this.autoSaveSettings();
+
+        // Announce the change
+        const message = enabled ?
+            'Enhanced natural speech enabled. Speech will include natural pauses and emphasis.' :
+            'Enhanced natural speech disabled. Speech will use basic settings.';
+        this.announceToScreenReader(message);
     }
 
     // Auto-save settings with debouncing
