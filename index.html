@@ -33,6 +33,9 @@
                     Rhythmic Reader
                 </h1>
                 <div class="header-buttons">
+                    <button id="themeToggleBtn" class="header-btn" aria-label="Toggle Theme" title="Toggle Light/Dark Theme">
+                        🌙
+                    </button>
                     <button id="helpBtn" class="header-btn" aria-label="Show Help" title="Show Help">
                         ❓
                     </button>
@@ -184,11 +187,17 @@
                         
                         <div class="setting-group">
                             <label for="themeSelect">Theme:</label>
-                            <select id="themeSelect">
-                                <option value="light">Light</option>
-                                <option value="dark">Dark</option>
-                                <option value="sepia">Sepia</option>
-                            </select>
+                            <div class="theme-selector">
+                                <select id="themeSelect">
+                                    <option value="light">Light</option>
+                                    <option value="dark">Dark</option>
+                                    <option value="sepia">Sepia</option>
+                                </select>
+                                <div class="theme-preview" id="themePreview">
+                                    <div class="preview-bg"></div>
+                                    <div class="preview-text">Aa</div>
+                                </div>
+                            </div>
                         </div>
                         
                         <div class="setting-group">

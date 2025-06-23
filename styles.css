@@ -72,8 +72,14 @@
     --text-primary: #5c4a37;
     --text-secondary: #8b7355;
     --text-muted: #a68b5b;
-    --border-color: #e8dcc0;
+    --border-color: #d4c5a9;
+    --accent-color: #8b5a2b;
+    --accent-hover: #6d4423;
+    --highlight-color: #d97706;
     --highlight-bg: #fef3c7;
+    --success-color: #059669;
+    --error-color: #dc2626;
+    --warning-color: #d97706;
 }
 
 /* Base Styles */
@@ -95,6 +101,11 @@ body {
     color: var(--text-primary);
     background-color: var(--bg-primary);
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth transitions for theme switching */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* Typography */
@@ -763,6 +774,44 @@ textarea:focus {
     background-color: var(--bg-secondary);
     color: var(--text-primary);
     font-size: var(--font-size-base);
+}
+
+/* Theme Selector */
+.theme-selector {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.theme-selector select {
+    flex: 1;
+}
+
+.theme-preview {
+    width: 60px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--border-color);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.preview-bg {
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 50%, var(--bg-tertiary) 100%);
+}
+
+.preview-text {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .setting-group input[type="color"] {

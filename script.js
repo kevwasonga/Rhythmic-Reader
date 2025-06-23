@@ -73,6 +73,7 @@ class RhythmicReader {
         document.getElementById('testVoiceBtn').addEventListener('click', () => this.testVoice());
 
         // Settings and Help
+        document.getElementById('themeToggleBtn').addEventListener('click', () => this.toggleTheme());
         document.getElementById('helpBtn').addEventListener('click', () => this.showHelp());
         document.getElementById('settingsBtn').addEventListener('click', () => this.openSettings());
         document.getElementById('closeSettingsBtn').addEventListener('click', () => this.closeSettings());
@@ -788,8 +789,12 @@ class RhythmicReader {
         document.getElementById('lineHeightValue').textContent = this.settings.lineHeight;
 
         // Apply theme
-        document.documentElement.setAttribute('data-theme', this.settings.theme);
+        if (this.settings.theme !== 'light') {
+            document.documentElement.setAttribute('data-theme', this.settings.theme);
+        }
         document.getElementById('themeSelect').value = this.settings.theme;
+        this.updateThemePreview(this.settings.theme);
+        this.updateThemeToggleIcon(this.settings.theme);
 
         // Apply highlight color
         document.documentElement.style.setProperty('--highlight-color', this.settings.highlightColor);
@@ -863,8 +868,141 @@ class RhythmicReader {
 
     updateTheme(theme) {
         this.settings.theme = theme;
-        document.documentElement.setAttribute('data-theme', theme);
+
+        // Remove any existing theme attributes
+        document.documentElement.removeAttribute('data-theme');
+
+        // Force a reflow to ensure the removal takes effect
+        document.documentElement.offsetHeight;
+
+        // Apply the new theme
+        if (theme !== 'light') {
+            document.documentElement.setAttribute('data-theme', theme);
+        }
+
+        // Update highlight color based on theme if using default
+        if (!this.settings.highlightColor || this.settings.highlightColor === '#fbbf24') {
+            this.updateHighlightColorForTheme(theme);
+        }
+
+        // Update theme preview
+        this.updateThemePreview(theme);
+
         this.autoSaveSettings();
+
+        // Announce theme change to screen readers
+        this.announceToScreenReader(`Theme changed to ${theme} mode`);
+    }
+
+    // Update theme preview
+    updateThemePreview(theme) {
+        const preview = document.getElementById('themePreview');
+        if (!preview) return;
+
+        // Remove existing theme classes
+        preview.classList.remove('theme-light', 'theme-dark', 'theme-sepia');
+
+        // Add current theme class
+        preview.classList.add(`theme-${theme}`);
+
+        // Update preview colors based on theme
+        const previewBg = preview.querySelector('.preview-bg');
+        const previewText = preview.querySelector('.preview-text');
+
+        if (previewBg && previewText) {
+            let bgColors, textColor;
+
+            switch (theme) {
+                case 'dark':
+                    bgColors = 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)';
+                    textColor = '#f1f5f9';
+                    break;
+                case 'sepia':
+                    bgColors = 'linear-gradient(135deg, #f7f3e9 0%, #f0e6d2 50%, #e8dcc0 100%)';
+                    textColor = '#5c4a37';
+                    break;
+                default: // light
+                    bgColors = 'linear-gradient(135deg, #ffffff 0%, #f8fafc 50%, #e2e8f0 100%)';
+                    textColor = '#1e293b';
+            }
+
+            previewBg.style.background = bgColors;
+            previewText.style.color = textColor;
+        }
+    }
+
+    // Toggle between light and dark themes
+    toggleTheme() {
+        const currentTheme = this.settings.theme;
+        let newTheme;
+
+        // Cycle through themes: light -> dark -> sepia -> light
+        switch (currentTheme) {
+            case 'light':
+                newTheme = 'dark';
+                break;
+            case 'dark':
+                newTheme = 'sepia';
+                break;
+            case 'sepia':
+                newTheme = 'light';
+                break;
+            default:
+                newTheme = 'dark';
+        }
+
+        this.updateTheme(newTheme);
+        this.updateThemeToggleIcon(newTheme);
+
+        // Update the settings dropdown if it's open
+        document.getElementById('themeSelect').value = newTheme;
+    }
+
+    // Update theme toggle button icon
+    updateThemeToggleIcon(theme) {
+        const toggleBtn = document.getElementById('themeToggleBtn');
+        let icon, title;
+
+        switch (theme) {
+            case 'dark':
+                icon = '☀️';
+                title = 'Switch to Light Theme';
+                break;
+            case 'sepia':
+                icon = '🌙';
+                title = 'Switch to Dark Theme';
+                break;
+            default: // light
+                icon = '🌙';
+                title = 'Switch to Dark Theme';
+        }
+
+        toggleBtn.textContent = icon;
+        toggleBtn.setAttribute('title', title);
+        toggleBtn.setAttribute('aria-label', title);
+    }
+
+    // Update highlight color based on theme
+    updateHighlightColorForTheme(theme) {
+        let highlightColor;
+        switch (theme) {
+            case 'dark':
+                highlightColor = '#fbbf24'; // Amber for dark theme
+                break;
+            case 'sepia':
+                highlightColor = '#d97706'; // Orange for sepia theme
+                break;
+            default:
+                highlightColor = '#fbbf24'; // Default amber
+        }
+
+        this.settings.highlightColor = highlightColor;
+        document.documentElement.style.setProperty('--highlight-color', highlightColor);
+        const highlightBg = this.hexToRgba(highlightColor, 0.3);
+        document.documentElement.style.setProperty('--highlight-bg', highlightBg);
+
+        // Update the color picker to reflect the change
+        document.getElementById('highlightColorPicker').value = highlightColor;
     }
 
     updateHighlightColor(color) {
