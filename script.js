@@ -304,6 +304,12 @@ class RhythmicReader {
         this.renderTextLines();
         this.updateProgress();
         this.updatePlayPauseButton();
+
+        // Focus management for accessibility
+        document.getElementById('playPauseBtn').focus();
+
+        // Announce to screen readers
+        this.announceToScreenReader(`Reading session started. ${this.textLines.length} lines loaded. Press space to begin reading.`);
     }
 
     // Render text lines in the display
@@ -442,13 +448,34 @@ class RhythmicReader {
         // Remove previous highlights
         document.querySelectorAll('.text-line').forEach(line => {
             line.classList.remove('current');
+            line.removeAttribute('aria-current');
         });
 
         // Highlight current line
         const currentLine = document.getElementById(`line-${this.currentLineIndex}`);
         if (currentLine) {
             currentLine.classList.add('current');
+            currentLine.setAttribute('aria-current', 'true');
+
+            // Announce to screen readers
+            this.announceToScreenReader(`Reading line ${this.currentLineIndex + 1} of ${this.textLines.length}`);
         }
+    }
+
+    // Announce to screen readers
+    announceToScreenReader(message) {
+        const announcement = document.createElement('div');
+        announcement.setAttribute('aria-live', 'polite');
+        announcement.setAttribute('aria-atomic', 'true');
+        announcement.className = 'sr-only';
+        announcement.textContent = message;
+
+        document.body.appendChild(announcement);
+
+        // Remove after announcement
+        setTimeout(() => {
+            document.body.removeChild(announcement);
+        }, 1000);
     }
 
     // Mark line as completed
@@ -463,11 +490,23 @@ class RhythmicReader {
     // Scroll to keep current line visible
     scrollToCurrentLine() {
         const currentLine = document.getElementById(`line-${this.currentLineIndex}`);
-        if (currentLine) {
-            currentLine.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
+        const textDisplay = document.getElementById('textDisplay');
+
+        if (currentLine && textDisplay) {
+            const displayRect = textDisplay.getBoundingClientRect();
+            const lineRect = currentLine.getBoundingClientRect();
+
+            // Check if line is outside the visible area
+            const isAbove = lineRect.top < displayRect.top;
+            const isBelow = lineRect.bottom > displayRect.bottom;
+
+            if (isAbove || isBelow) {
+                currentLine.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                    inline: 'nearest'
+                });
+            }
         }
     }
 
@@ -549,11 +588,42 @@ class RhythmicReader {
         this.isPaused = false;
         this.speechSynthesis.cancel();
         this.updatePlayPauseButton();
-        
-        // Show completion message
+
+        // Calculate session statistics
+        const sessionStats = this.calculateSessionStats();
+
+        // Show completion message with stats
         setTimeout(() => {
-            alert('Reading completed! 🎉');
+            const statsMessage = `Reading completed! 🎉\n\n` +
+                `📊 Session Statistics:\n` +
+                `• Total lines read: ${sessionStats.totalLines}\n` +
+                `• Total words read: ${sessionStats.totalWords}\n` +
+                `• Reading time: ${sessionStats.readingTime}\n` +
+                `• Average WPM: ${sessionStats.averageWpm}\n` +
+                `• Target WPM: ${sessionStats.targetWpm}`;
+
+            alert(statsMessage);
         }, 500);
+    }
+
+    // Calculate session statistics
+    calculateSessionStats() {
+        const totalLines = this.textLines.length;
+        const totalWords = this.wordsRead;
+        const elapsedTime = this.readingStartTime ? (Date.now() - this.readingStartTime) / 1000 : 0;
+        const minutes = Math.floor(elapsedTime / 60);
+        const seconds = Math.floor(elapsedTime % 60);
+        const readingTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        const averageWpm = elapsedTime > 0 ? Math.round((totalWords / elapsedTime) * 60) : 0;
+        const targetWpm = parseInt(document.getElementById('speedSlider').value);
+
+        return {
+            totalLines,
+            totalWords,
+            readingTime,
+            averageWpm,
+            targetWpm
+        };
     }
 
     // Restart reading
@@ -579,9 +649,15 @@ class RhythmicReader {
         this.speechSynthesis.cancel();
         this.isPlaying = false;
         this.isPaused = false;
-        
+
         document.getElementById('readingSection').style.display = 'none';
         document.getElementById('inputSection').style.display = 'block';
+
+        // Focus management
+        document.getElementById('textInput').focus();
+
+        // Announce to screen readers
+        this.announceToScreenReader('Returned to text input. You can modify your text or start a new reading session.');
     }
 
     // Update reading speed
@@ -838,23 +914,63 @@ class RhythmicReader {
             return;
         }
 
+        const readingActive = document.getElementById('readingSection').style.display !== 'none';
+
         switch (event.code) {
             case 'Space':
                 event.preventDefault();
-                if (document.getElementById('readingSection').style.display !== 'none') {
+                if (readingActive) {
                     this.togglePlayPause();
                 }
                 break;
             case 'ArrowLeft':
                 event.preventDefault();
-                if (document.getElementById('readingSection').style.display !== 'none') {
+                if (readingActive) {
                     this.previousLine();
                 }
                 break;
             case 'ArrowRight':
                 event.preventDefault();
-                if (document.getElementById('readingSection').style.display !== 'none') {
+                if (readingActive) {
                     this.nextLine();
+                }
+                break;
+            case 'ArrowUp':
+                event.preventDefault();
+                if (readingActive) {
+                    // Jump back 5 lines
+                    this.jumpLines(-5);
+                }
+                break;
+            case 'ArrowDown':
+                event.preventDefault();
+                if (readingActive) {
+                    // Jump forward 5 lines
+                    this.jumpLines(5);
+                }
+                break;
+            case 'Home':
+                event.preventDefault();
+                if (readingActive) {
+                    this.jumpToStart();
+                }
+                break;
+            case 'End':
+                event.preventDefault();
+                if (readingActive) {
+                    this.jumpToEnd();
+                }
+                break;
+            case 'KeyR':
+                event.preventDefault();
+                if (readingActive && event.ctrlKey) {
+                    this.restartReading();
+                }
+                break;
+            case 'KeyS':
+                event.preventDefault();
+                if (event.ctrlKey) {
+                    this.openSettings();
                 }
                 break;
             case 'Escape':
@@ -863,8 +979,54 @@ class RhythmicReader {
                     this.closeSettings();
                 } else if (document.getElementById('tutorialOverlay').style.display !== 'none') {
                     this.closeTutorial();
+                } else if (readingActive) {
+                    this.backToInput();
                 }
                 break;
+        }
+    }
+
+    // Jump multiple lines
+    jumpLines(count) {
+        const newIndex = Math.max(0, Math.min(this.textLines.length - 1, this.currentLineIndex + count));
+        if (newIndex !== this.currentLineIndex) {
+            this.speechSynthesis.cancel();
+            this.currentLineIndex = newIndex;
+            this.updateProgress();
+            if (this.isPlaying) {
+                this.readCurrentLine();
+            } else {
+                this.highlightCurrentLine();
+            }
+            if (this.settings.autoScroll) {
+                this.scrollToCurrentLine();
+            }
+        }
+    }
+
+    // Jump to start
+    jumpToStart() {
+        this.speechSynthesis.cancel();
+        this.currentLineIndex = 0;
+        this.updateProgress();
+        if (this.isPlaying) {
+            this.readCurrentLine();
+        } else {
+            this.highlightCurrentLine();
+        }
+        if (this.settings.autoScroll) {
+            this.scrollToCurrentLine();
+        }
+    }
+
+    // Jump to end
+    jumpToEnd() {
+        this.speechSynthesis.cancel();
+        this.currentLineIndex = Math.max(0, this.textLines.length - 1);
+        this.updateProgress();
+        this.highlightCurrentLine();
+        if (this.settings.autoScroll) {
+            this.scrollToCurrentLine();
         }
     }
 }

@@ -499,29 +499,103 @@ h3 { font-size: var(--font-size-xl); }
     .input-methods {
         grid-template-columns: 1fr;
     }
-    
+
     .controls-panel {
         grid-template-columns: 1fr;
         gap: var(--spacing-md);
         text-align: center;
     }
-    
+
     .playback-controls {
         justify-content: center;
     }
-    
+
+    .control-btn {
+        min-width: 56px;
+        height: 56px;
+        font-size: var(--font-size-xl);
+    }
+
     .progress-info {
         flex-direction: column;
         gap: var(--spacing-xs);
         text-align: center;
     }
-    
+
     .main-content {
         padding: var(--spacing-md);
     }
-    
+
     .input-section {
         padding: var(--spacing-lg);
+    }
+
+    .text-display {
+        font-size: var(--font-size-base);
+        padding: var(--spacing-md);
+    }
+
+    .modal-content {
+        width: 95%;
+        margin: var(--spacing-md);
+    }
+
+    .shortcuts-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .shortcut-item {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+        text-align: center;
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+    .header-content {
+        padding: 0 var(--spacing-sm);
+    }
+
+    .app-title {
+        font-size: var(--font-size-xl);
+    }
+
+    .input-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .primary-btn, .secondary-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .reading-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .text-display {
+        max-height: 50vh;
+    }
+}
+
+/* Touch-friendly improvements */
+@media (hover: none) and (pointer: coarse) {
+    .control-btn {
+        min-width: 60px;
+        height: 60px;
+    }
+
+    .primary-btn, .secondary-btn {
+        padding: var(--spacing-lg) var(--spacing-xl);
+        font-size: var(--font-size-lg);
+    }
+
+    .settings-btn {
+        padding: var(--spacing-md);
+        font-size: var(--font-size-xl);
     }
 }
 
@@ -692,6 +766,40 @@ textarea:focus {
 .setting-group input[type="checkbox"] {
     margin-right: var(--spacing-sm);
     transform: scale(1.2);
+}
+
+/* Keyboard Shortcuts */
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+}
+
+.shortcut-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.shortcut-item kbd {
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    font-family: monospace;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--text-primary);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.shortcut-item span {
+    color: var(--text-secondary);
+    font-size: var(--font-size-sm);
 }
 
 /* Tutorial Overlay */

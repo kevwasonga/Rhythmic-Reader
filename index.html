@@ -90,7 +90,14 @@
                     
                     <div class="speed-control">
                         <label for="speedSlider">Speed: <span id="speedValue">150</span> WPM</label>
-                        <input type="range" id="speedSlider" min="50" max="400" value="150" step="10">
+                        <input type="range"
+                               id="speedSlider"
+                               min="50"
+                               max="400"
+                               value="150"
+                               step="10"
+                               aria-label="Reading speed in words per minute"
+                               aria-describedby="speedValue">
                     </div>
                     
                     <div class="voice-control">
@@ -116,7 +123,12 @@
 
                 <!-- Text Display -->
                 <div class="text-display-container">
-                    <div id="textDisplay" class="text-display" role="main" aria-live="polite">
+                    <div id="textDisplay"
+                         class="text-display"
+                         role="main"
+                         aria-live="polite"
+                         aria-label="Reading text display"
+                         tabindex="0">
                         <!-- Text lines will be inserted here -->
                     </div>
                 </div>
@@ -182,19 +194,53 @@
                     
                     <div class="settings-section">
                         <h3>Reading</h3>
-                        
+
                         <div class="setting-group">
                             <label>
                                 <input type="checkbox" id="autoScrollCheckbox" checked>
                                 Auto-scroll to current line
                             </label>
                         </div>
-                        
+
                         <div class="setting-group">
                             <label>
                                 <input type="checkbox" id="showWpmCheckbox" checked>
                                 Show live WPM counter
                             </label>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Keyboard Shortcuts</h3>
+                        <div class="shortcuts-grid">
+                            <div class="shortcut-item">
+                                <kbd>Space</kbd>
+                                <span>Play/Pause</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>←</kbd> <kbd>→</kbd>
+                                <span>Previous/Next line</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>↑</kbd> <kbd>↓</kbd>
+                                <span>Jump 5 lines</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>Home</kbd> <kbd>End</kbd>
+                                <span>Jump to start/end</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>Ctrl</kbd> + <kbd>R</kbd>
+                                <span>Restart reading</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>Ctrl</kbd> + <kbd>S</kbd>
+                                <span>Open settings</span>
+                            </div>
+                            <div class="shortcut-item">
+                                <kbd>Esc</kbd>
+                                <span>Close/Back</span>
+                            </div>
                         </div>
                     </div>
                 </div>
