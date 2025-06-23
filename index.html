@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rhythmic Reader - Paced Reading Companion</title>
+    <meta name="description" content="Improve your reading speed and comprehension with paced audio narration and visual line highlighting">
+    
+    <!-- Preload dyslexia-friendly font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=OpenDyslexic:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#2563eb">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Accessibility -->
+    <meta name="robots" content="index, follow">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1 class="app-title">
+                    <span class="title-icon">📖</span>
+                    Rhythmic Reader
+                </h1>
+                <button id="settingsBtn" class="settings-btn" aria-label="Open Settings">
+                    ⚙️
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Text Input Section -->
+            <section class="input-section" id="inputSection">
+                <div class="input-container">
+                    <h2>Add Your Text</h2>
+                    <div class="input-methods">
+                        <div class="text-input-area">
+                            <textarea 
+                                id="textInput" 
+                                placeholder="Paste your text here or upload a .txt file..."
+                                aria-label="Text input area"
+                                rows="10"
+                            ></textarea>
+                        </div>
+                        
+                        <div class="file-upload-area" id="fileUploadArea">
+                            <input type="file" id="fileInput" accept=".txt" hidden>
+                            <div class="upload-zone" id="uploadZone">
+                                <div class="upload-content">
+                                    <span class="upload-icon">📄</span>
+                                    <p>Drag & drop a .txt file here</p>
+                                    <p>or <button type="button" id="browseBtn" class="browse-btn">browse files</button></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="input-actions">
+                        <button id="startReadingBtn" class="primary-btn" disabled>
+                            Start Reading
+                        </button>
+                        <button id="clearTextBtn" class="secondary-btn">
+                            Clear Text
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Reading Section -->
+            <section class="reading-section" id="readingSection" style="display: none;">
+                <!-- Controls -->
+                <div class="controls-panel">
+                    <div class="playback-controls">
+                        <button id="prevLineBtn" class="control-btn" aria-label="Previous line">⏮️</button>
+                        <button id="playPauseBtn" class="control-btn play-pause" aria-label="Play/Pause">▶️</button>
+                        <button id="nextLineBtn" class="control-btn" aria-label="Next line">⏭️</button>
+                    </div>
+                    
+                    <div class="speed-control">
+                        <label for="speedSlider">Speed: <span id="speedValue">150</span> WPM</label>
+                        <input type="range" id="speedSlider" min="50" max="400" value="150" step="10">
+                    </div>
+                    
+                    <div class="voice-control">
+                        <label for="voiceSelect">Voice:</label>
+                        <select id="voiceSelect" aria-label="Select voice">
+                            <option value="">Loading voices...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span id="progressText">Line 0 of 0</span>
+                        <span id="timeRemaining">Time remaining: --:--</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+
+                <!-- Text Display -->
+                <div class="text-display-container">
+                    <div id="textDisplay" class="text-display" role="main" aria-live="polite">
+                        <!-- Text lines will be inserted here -->
+                    </div>
+                </div>
+
+                <!-- Reading Actions -->
+                <div class="reading-actions">
+                    <button id="backToInputBtn" class="secondary-btn">
+                        ← Back to Input
+                    </button>
+                    <button id="restartBtn" class="secondary-btn">
+                        🔄 Restart
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Settings Modal -->
+        <div id="settingsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button id="closeSettingsBtn" class="close-btn" aria-label="Close settings">&times;</button>
+                </div>
+                
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Appearance</h3>
+                        
+                        <div class="setting-group">
+                            <label for="fontSizeSlider">Font Size: <span id="fontSizeValue">16</span>px</label>
+                            <input type="range" id="fontSizeSlider" min="12" max="32" value="16">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label for="fontFamilySelect">Font Family:</label>
+                            <select id="fontFamilySelect">
+                                <option value="system">System Default</option>
+                                <option value="dyslexic">OpenDyslexic (Dyslexia-friendly)</option>
+                                <option value="serif">Serif</option>
+                                <option value="sans-serif">Sans-serif</option>
+                            </select>
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label for="lineHeightSlider">Line Height: <span id="lineHeightValue">1.6</span></label>
+                            <input type="range" id="lineHeightSlider" min="1.2" max="2.5" value="1.6" step="0.1">
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label for="themeSelect">Theme:</label>
+                            <select id="themeSelect">
+                                <option value="light">Light</option>
+                                <option value="dark">Dark</option>
+                                <option value="sepia">Sepia</option>
+                            </select>
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label for="highlightColorPicker">Highlight Color:</label>
+                            <input type="color" id="highlightColorPicker" value="#fbbf24">
+                        </div>
+                    </div>
+                    
+                    <div class="settings-section">
+                        <h3>Reading</h3>
+                        
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="autoScrollCheckbox" checked>
+                                Auto-scroll to current line
+                            </label>
+                        </div>
+                        
+                        <div class="setting-group">
+                            <label>
+                                <input type="checkbox" id="showWpmCheckbox" checked>
+                                Show live WPM counter
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button id="resetSettingsBtn" class="secondary-btn">Reset to Defaults</button>
+                    <button id="saveSettingsBtn" class="primary-btn">Save Settings</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutorial Overlay -->
+        <div id="tutorialOverlay" class="tutorial-overlay" style="display: none;">
+            <div class="tutorial-content">
+                <h2>Welcome to Rhythmic Reader! 👋</h2>
+                <div class="tutorial-steps">
+                    <div class="tutorial-step">
+                        <span class="step-number">1</span>
+                        <p>Paste text or upload a .txt file</p>
+                    </div>
+                    <div class="tutorial-step">
+                        <span class="step-number">2</span>
+                        <p>Adjust reading speed and voice settings</p>
+                    </div>
+                    <div class="tutorial-step">
+                        <span class="step-number">3</span>
+                        <p>Click "Start Reading" and follow along!</p>
+                    </div>
+                </div>
+                <div class="tutorial-actions">
+                    <button id="skipTutorialBtn" class="secondary-btn">Skip</button>
+                    <button id="startTutorialBtn" class="primary-btn">Got it!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+        <div class="spinner"></div>
+        <p>Loading voices...</p>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
