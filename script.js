@@ -84,6 +84,8 @@ class RhythmicReader {
         document.getElementById('fontFamilySelect').addEventListener('change', (e) => this.updateFontFamily(e.target.value));
         document.getElementById('themeSelect').addEventListener('change', (e) => this.updateTheme(e.target.value));
         document.getElementById('highlightColorPicker').addEventListener('change', (e) => this.updateHighlightColor(e.target.value));
+        document.getElementById('autoScrollCheckbox').addEventListener('change', (e) => this.updateAutoScroll(e.target.checked));
+        document.getElementById('showWpmCheckbox').addEventListener('change', (e) => this.updateShowWpm(e.target.checked));
 
         // Tutorial
         document.getElementById('skipTutorialBtn').addEventListener('click', () => this.closeTutorial());
@@ -474,6 +476,7 @@ class RhythmicReader {
         const progressText = document.getElementById('progressText');
         const progressFill = document.getElementById('progressFill');
         const timeRemaining = document.getElementById('timeRemaining');
+        const liveWpmCounter = document.getElementById('liveWpmCounter');
 
         const totalLines = this.textLines.length;
         const completedLines = this.currentLineIndex;
@@ -482,7 +485,7 @@ class RhythmicReader {
         progressText.textContent = `Line ${completedLines + 1} of ${totalLines}`;
         progressFill.style.width = `${progressPercent}%`;
 
-        // Calculate estimated time remaining
+        // Calculate estimated time remaining and live WPM
         if (this.readingStartTime && completedLines > 0) {
             const elapsedTime = (Date.now() - this.readingStartTime) / 1000;
             const avgTimePerLine = elapsedTime / completedLines;
@@ -492,6 +495,17 @@ class RhythmicReader {
             const minutes = Math.floor(estimatedTimeRemaining / 60);
             const seconds = Math.floor(estimatedTimeRemaining % 60);
             timeRemaining.textContent = `Time remaining: ${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+            // Calculate live WPM
+            if (this.settings.showWpm && this.wordsRead > 0) {
+                const liveWpm = Math.round((this.wordsRead / elapsedTime) * 60);
+                liveWpmCounter.textContent = `Current: ${liveWpm} WPM`;
+                liveWpmCounter.style.display = 'inline-block';
+            } else {
+                liveWpmCounter.style.display = 'none';
+            }
+        } else {
+            liveWpmCounter.style.display = 'none';
         }
     }
 
@@ -572,8 +586,10 @@ class RhythmicReader {
 
     // Update reading speed
     updateSpeed(wpm) {
+        this.settings.speed = parseInt(wpm);
         document.getElementById('speedValue').textContent = wpm;
-        
+        this.autoSaveSettings();
+
         // If currently speaking, update the rate
         if (this.isPlaying && this.currentUtterance) {
             // Note: Changing rate mid-utterance isn't supported by all browsers
@@ -583,6 +599,8 @@ class RhythmicReader {
 
     // Update voice selection
     updateVoice(voiceIndex) {
+        this.settings.voice = parseInt(voiceIndex);
+        this.autoSaveSettings();
         // Voice will be applied to next utterance
     }
 
@@ -667,12 +685,15 @@ class RhythmicReader {
     applySettings() {
         // Apply font size
         document.documentElement.style.setProperty('--font-size-base', `${this.settings.fontSize}px`);
+        document.documentElement.style.setProperty('--font-size-lg', `${this.settings.fontSize + 2}px`);
         document.getElementById('fontSizeSlider').value = this.settings.fontSize;
         document.getElementById('fontSizeValue').textContent = this.settings.fontSize;
 
         // Apply font family
         const textDisplay = document.getElementById('textDisplay');
+        const textInput = document.getElementById('textInput');
         textDisplay.className = `text-display font-${this.settings.fontFamily}`;
+        textInput.className = `font-${this.settings.fontFamily}`;
         document.getElementById('fontFamilySelect').value = this.settings.fontFamily;
 
         // Apply line height
@@ -686,6 +707,8 @@ class RhythmicReader {
 
         // Apply highlight color
         document.documentElement.style.setProperty('--highlight-color', this.settings.highlightColor);
+        const highlightBg = this.hexToRgba(this.settings.highlightColor, 0.3);
+        document.documentElement.style.setProperty('--highlight-bg', highlightBg);
         document.getElementById('highlightColorPicker').value = this.settings.highlightColor;
 
         // Apply other settings
@@ -693,6 +716,19 @@ class RhythmicReader {
         document.getElementById('showWpmCheckbox').checked = this.settings.showWpm;
         document.getElementById('speedSlider').value = this.settings.speed;
         document.getElementById('speedValue').textContent = this.settings.speed;
+
+        // Apply voice setting if available
+        if (this.voices.length > 0 && this.settings.voice < this.voices.length) {
+            document.getElementById('voiceSelect').value = this.settings.voice;
+        }
+    }
+
+    // Convert hex color to rgba
+    hexToRgba(hex, alpha) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
 
     resetSettings() {
@@ -719,28 +755,67 @@ class RhythmicReader {
         this.settings.fontSize = parseInt(size);
         document.getElementById('fontSizeValue').textContent = size;
         document.documentElement.style.setProperty('--font-size-base', `${size}px`);
+        document.documentElement.style.setProperty('--font-size-lg', `${parseInt(size) + 2}px`);
+        this.autoSaveSettings();
     }
 
     updateLineHeight(height) {
         this.settings.lineHeight = parseFloat(height);
         document.getElementById('lineHeightValue').textContent = height;
         document.documentElement.style.setProperty('--line-height-reading', height);
+        this.autoSaveSettings();
     }
 
     updateFontFamily(family) {
         this.settings.fontFamily = family;
         const textDisplay = document.getElementById('textDisplay');
+        const textInput = document.getElementById('textInput');
         textDisplay.className = `text-display font-${family}`;
+        textInput.className = `font-${family}`;
+        this.autoSaveSettings();
     }
 
     updateTheme(theme) {
         this.settings.theme = theme;
         document.documentElement.setAttribute('data-theme', theme);
+        this.autoSaveSettings();
     }
 
     updateHighlightColor(color) {
         this.settings.highlightColor = color;
         document.documentElement.style.setProperty('--highlight-color', color);
+        const highlightBg = this.hexToRgba(color, 0.3);
+        document.documentElement.style.setProperty('--highlight-bg', highlightBg);
+        this.autoSaveSettings();
+    }
+
+    updateAutoScroll(enabled) {
+        this.settings.autoScroll = enabled;
+        this.autoSaveSettings();
+    }
+
+    updateShowWpm(enabled) {
+        this.settings.showWpm = enabled;
+        const liveWpmCounter = document.getElementById('liveWpmCounter');
+        if (!enabled) {
+            liveWpmCounter.style.display = 'none';
+        } else if (this.isPlaying) {
+            this.updateProgress(); // Refresh to show/hide WPM
+        }
+        this.autoSaveSettings();
+    }
+
+    // Auto-save settings with debouncing
+    autoSaveSettings() {
+        clearTimeout(this.saveTimeout);
+        this.saveTimeout = setTimeout(() => {
+            try {
+                localStorage.setItem('rhythmicReaderSettings', JSON.stringify(this.settings));
+                console.log('Settings auto-saved');
+            } catch (error) {
+                console.error('Error auto-saving settings:', error);
+            }
+        }, 500);
     }
 
     // Tutorial

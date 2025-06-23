@@ -415,9 +415,21 @@ h3 { font-size: var(--font-size-xl); }
 .progress-info {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     margin-bottom: var(--spacing-sm);
     font-size: var(--font-size-sm);
     color: var(--text-secondary);
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+.wpm-counter {
+    background-color: var(--accent-color);
+    color: white;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: var(--font-size-sm);
 }
 
 .progress-bar {
